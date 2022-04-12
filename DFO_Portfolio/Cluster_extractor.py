@@ -35,7 +35,7 @@ class Cluster_ext:
         return optimal_k , best_kmeans.labels_.tolist() , clusters
     
     
-        # Gap Statistic for K means
+        # K means by gap-stat
     def optimalK_KMeans(data, nrefs=3, maxClusters=9):
         """
         Calculates KMeans optimal K using Gap Statistic 
@@ -75,4 +75,22 @@ class Cluster_ext:
             resultsdf = resultsdf.append({'clusterCount':k, 'gap':gap}, ignore_index=True)
         return (gaps.argmax() + 1, resultsdf)
 
-        
+
+
+    # QuasiDiagonaliztion
+    def getQuasiDiag(link):  
+        link = link.astype(int)
+        sortIx = pd.Series([link[-1, 0], link[-1, 1]])
+        numItems = link[-1, 3] 
+        while sortIx.max() >= numItems:
+            sortIx.index = range(0, sortIx.shape[0] * 2, 2) 
+            df0 = sortIx[sortIx >= numItems]
+            i = df0.index
+            j = df0.values - numItems
+            sortIx[i] = link[j, 0]
+            df0 = pd.Series(link[j, 1], index=i + 1)
+            sortIx = sortIx.append(df0)
+            sortIx = sortIx.sort_index()  
+            sortIx.index = range(sortIx.shape[0])
+        return sortIx.tolist() 
+            
