@@ -12,6 +12,7 @@ class Cluster_ext:
                         k_min = 2 ,
                         max_num_clusters = None
                         ):
+        
         silhouette_coefficients = []
         if max_num_clusters != None:
             k_max = max_num_clusters
@@ -35,45 +36,57 @@ class Cluster_ext:
         return optimal_k , best_kmeans.labels_.tolist() , clusters
     
     
-        # K means by gap-stat
-    def optimalK_KMeans(data, nrefs=3, maxClusters=9):
+    # K means by gap-stat
+    def optimalK_KMeans(feature_matrix, nrefs=3, maxClusters_num=None , random_state = 1):
         """
-        Calculates KMeans optimal K using Gap Statistic 
-        Params:
-            data: ndarry of shape (n_samples, n_features)
-            nrefs: number of sample reference datasets to create
-            maxClusters: Maximum number of clusters to test for
-        Returns: (gaps, optimalK)
-        """
-        gaps = np.zeros((len(range(1, maxClusters)),))
-        resultsdf = pd.DataFrame({'clusterCount':[], 'gap':[]})
-        for gap_index, k in enumerate(range(1, maxClusters)):
-            # Holder for reference dispersion results
-            refDisps = np.zeros(nrefs)
-            # For n references, generate random sample and perform kmeans getting resulting dispersion of each loop
-            for i in range(nrefs):
-                
-                # Create new random reference set
-                randomReference = np.random.random_sample(size=data.shape)
-                
-                # Fit to it
-                km = KMeans(k)
-                km.fit(randomReference)
-                
-                refDisp = km.inertia_
-                refDisps[i] = refDisp
-            # Fit cluster to original data and create dispersion
+    Calculates KMeans optimal K using Gap Statistic 
+    Params:
+        feature_matrix: ndarry of shape (n_samples, n_features)
+        nrefs: number of sample reference datasets to create
+        maxClusters_num: Maximum number of clusters to test for
+    Returns: (gaps, optimalK , clusters)
+    """
+    if maxClusters_num == None:
+        maxClusters = feature_matrix.shape[0]
+    else:
+        maxClusters = maxClusters_num
+        
+    gaps = np.zeros((len(range(1, maxClusters)),))
+    resultsdf = pd.DataFrame({'clusterCount':[], 'gap':[]})
+    for gap_index, k in enumerate(range(1, maxClusters)):
+        # Holder for reference dispersion results
+        refDisps = np.zeros(nrefs)
+        # For n references, generate random sample and perform kmeans getting resulting dispersion of each loop
+        for i in range(nrefs):
+            
+            # Create new random reference set
+            randomReference = np.random.random_sample(size=feature_matrix.shape)
+            
+            # Fit to it
             km = KMeans(k)
-            km.fit(data)
+            km.fit(randomReference)
             
-            origDisp = km.inertia_
-            # Calculate gap statistic
-            gap = np.log(np.mean(refDisps)) - np.log(origDisp)
-            # Assign this loop's gap statistic to gaps
-            gaps[gap_index] = gap
-            
-            resultsdf = resultsdf.append({'clusterCount':k, 'gap':gap}, ignore_index=True)
-        return (gaps.argmax() + 1, resultsdf)
+            refDisp = km.inertia_
+            refDisps[i] = refDisp
+        # Fit cluster to original feature_matrix and create dispersion
+        km = KMeans(k)
+        km.fit(feature_matrix)
+        
+        origDisp = km.inertia_
+        # Calculate gap statistic
+        gap = np.log(np.mean(refDisps)) - np.log(origDisp)
+        # Assign this loop's gap statistic to gaps
+        gaps[gap_index] = gap
+        resultsdf = resultsdf.append({'clusterCount':k, 'gap':gap}, ignore_index=True)
+        optimal_k = gaps.argmax() + 1
+        best_kmeans = KMeans(n_clusters= optimal_k ,init = 'random',
+                            random_state= random_state)
+        best_kmeans.fit(feature_matrix)
+        
+        clusters = defaultdict(list)
+        for cluster_number,asset in zip(best_kmeans.labels_ , feature_matrix.columns):
+            clusters[cluster_number].append(asset)
+    return (optimal_k, resultsdf , clusters)
 
 
 
