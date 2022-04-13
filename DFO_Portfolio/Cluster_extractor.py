@@ -1,3 +1,8 @@
+import pandas as pd
+import numpy as np
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from collections import defaultdict
 
 
 
@@ -7,12 +12,28 @@ class Cluster_ext:
         pass
 
 
-    def KmeanClusterSil(feature_matrix,
+    def KmeanClusterSil(feature_matrix:pd.DataFrame,
                         random_state = 1,
                         k_min = 2 ,
                         max_num_clusters = None
                         ):
-        
+        """
+        KmeanClusterSil:\n
+        Clustering with Kmeans method and finding the optimal number of 
+        clusters based on Silhouette score.
+        ---------------------------
+        Parameters:
+            - feature_matrix: pandas.DataFrame
+            - random_state: int, default is 1.
+            - k_min: int, default is 2.
+            - max_num_clusters: int, default is None.
+        ---------------------------
+        Return:
+            - optimal_k: int
+            - best_kmeans.labels_.tolist: list
+            - clusters: dict
+        ---------------------------
+        """
         silhouette_coefficients = []
         if max_num_clusters != None:
             k_max = max_num_clusters
@@ -36,62 +57,88 @@ class Cluster_ext:
         return optimal_k , best_kmeans.labels_.tolist() , clusters
     
     
-    # K means by gap-stat
-    def optimalK_KMeans(feature_matrix, nrefs=3, maxClusters_num=None , random_state = 1):
+    def KmeanClusterGap(feature_matrix:pd.DataFrame,
+                        nrefs=3,
+                        max_num_clusters=None ,
+                        random_state = 1
+                        ):
+        
         """
-    Calculates KMeans optimal K using Gap Statistic 
-    Params:
-        feature_matrix: ndarry of shape (n_samples, n_features)
-        nrefs: number of sample reference datasets to create
-        maxClusters_num: Maximum number of clusters to test for
-    Returns: (gaps, optimalK , clusters)
-    """
-    if maxClusters_num == None:
-        maxClusters = feature_matrix.shape[0]
-    else:
-        maxClusters = maxClusters_num
-        
-    gaps = np.zeros((len(range(1, maxClusters)),))
-    resultsdf = pd.DataFrame({'clusterCount':[], 'gap':[]})
-    for gap_index, k in enumerate(range(1, maxClusters)):
-        # Holder for reference dispersion results
-        refDisps = np.zeros(nrefs)
-        # For n references, generate random sample and perform kmeans getting resulting dispersion of each loop
-        for i in range(nrefs):
+        KmeanClusterGap:\n
+        Clustering with Kmeans method and finding the optimal number of 
+        clusters based on Gap-statistic.
+        ---------------------------
+        Parameters:
+            - feature_matrix: pandas.DataFrame
+            - nrefs: int, default is 3.
+            - max_num_clusters: int, default is None.
+            - random_state: int, default is 1.
+        ---------------------------
+        Return:
+            - optimal_k: int
+            - Resultsdf: pandas.DataFrame
+            - clusters: dict
+        ---------------------------
             
-            # Create new random reference set
-            randomReference = np.random.random_sample(size=feature_matrix.shape)
+        """
+        if max_num_clusters == None:
+            maxClusters = feature_matrix.shape[0]
+        else:
+            maxClusters = max_num_clusters
             
-            # Fit to it
+        gaps = np.zeros((len(range(1, maxClusters)),))
+        resultsdf = pd.DataFrame({'clusterCount':[], 'gap':[]})
+        for gap_index, k in enumerate(range(1, maxClusters)):
+            # Holder for reference dispersion results
+            refDisps = np.zeros(nrefs)
+            # For n references, generate random sample and perform kmeans getting resulting dispersion of each loop
+            for i in range(nrefs):
+                
+                # Create new random reference set
+                randomReference = np.random.random_sample(size=feature_matrix.shape)
+                
+                # Fit to it
+                km = KMeans(k)
+                km.fit(randomReference)
+                
+                refDisp = km.inertia_
+                refDisps[i] = refDisp
+            # Fit cluster to original feature_matrix and create dispersion
             km = KMeans(k)
-            km.fit(randomReference)
+            km.fit(feature_matrix)
             
-            refDisp = km.inertia_
-            refDisps[i] = refDisp
-        # Fit cluster to original feature_matrix and create dispersion
-        km = KMeans(k)
-        km.fit(feature_matrix)
+            origDisp = km.inertia_
+            # Calculate gap statistic
+            gap = np.log(np.mean(refDisps)) - np.log(origDisp)
+            # Assign this loop's gap statistic to gaps
+            gaps[gap_index] = gap
+            resultsdf = resultsdf.append({'clusterCount':k, 'gap':gap}, ignore_index=True)
+            optimal_k = gaps.argmax() + 1
+            best_kmeans = KMeans(n_clusters= optimal_k ,init = 'random',
+                                random_state= random_state)
+            best_kmeans.fit(feature_matrix)
+            
+            clusters = defaultdict(list)
+            for cluster_number,asset in zip(best_kmeans.labels_ , feature_matrix.columns):
+                clusters[cluster_number].append(asset)
+        return optimal_k, resultsdf , clusters
+
+
+
+    def getQuasiDiag(link:np.array): 
         
-        origDisp = km.inertia_
-        # Calculate gap statistic
-        gap = np.log(np.mean(refDisps)) - np.log(origDisp)
-        # Assign this loop's gap statistic to gaps
-        gaps[gap_index] = gap
-        resultsdf = resultsdf.append({'clusterCount':k, 'gap':gap}, ignore_index=True)
-        optimal_k = gaps.argmax() + 1
-        best_kmeans = KMeans(n_clusters= optimal_k ,init = 'random',
-                            random_state= random_state)
-        best_kmeans.fit(feature_matrix)
-        
-        clusters = defaultdict(list)
-        for cluster_number,asset in zip(best_kmeans.labels_ , feature_matrix.columns):
-            clusters[cluster_number].append(asset)
-    return (optimal_k, resultsdf , clusters)
-
-
-
-    # QuasiDiagonaliztion
-    def getQuasiDiag(link):  
+        """
+        getQuasiDiag:\n
+        Gets Quasi-Diagonaliztion (actually Matrix Seriation) of the assets
+        ---------------------------
+        Parameters:
+            - link: numpy.array
+        ---------------------------
+        Return:
+            - sortIx.tolist(): list
+        ---------------------------
+            
+        """ 
         link = link.astype(int)
         sortIx = pd.Series([link[-1, 0], link[-1, 1]])
         numItems = link[-1, 3] 
