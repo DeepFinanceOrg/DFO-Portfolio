@@ -126,7 +126,7 @@ class Cluster_ext:
             - link: numpy.array, Linkage matrix.
         ---------------------------
         Return:
-            - sortIx.tolist(): list, List of sorted assets based on their simillarity.
+            - sortIx.tolist(): list, List of sorted asset indeces based on their simillarity.
         ---------------------------
             
         """ 
@@ -143,5 +143,6 @@ class Cluster_ext:
             sortIx = sortIx.append(df0)
             sortIx = sortIx.sort_index()  
             sortIx.index = range(sortIx.shape[0])
+            
         return sortIx.tolist() 
             
