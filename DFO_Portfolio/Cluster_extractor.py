@@ -26,12 +26,12 @@ class Cluster_ext:
             - feature_matrix: pandas.DataFrame
             - random_state: int, default is 1.
             - k_min: int, default is 2.
-            - max_num_clusters: int, default is None.
+            - max_num_clusters: int, Maximum number of clusters to test for and default is None.
         ---------------------------
         Return:
-            - optimal_k: int
-            - best_kmeans.labels_.tolist: list
-            - clusters: dict
+            - optimal_k: int, Optimal number of clusters.
+            - best_kmeans.labels_.tolist: list, list of cluster labels based on the best number of clusters. 
+            - clusters: dict, A Dictionary that contains assets in each cluster seperately.
         ---------------------------
         """
         silhouette_coefficients = []
@@ -63,28 +63,20 @@ class Cluster_ext:
                         random_state = 1
                         ):
         """
-        Calculates KMeans optimal K using Gap Statistic 
-        Params:
-            feature_matrix: ndarry of shape (n_samples, n_features)
-            nrefs: number of sample reference datasets to create
-            max_num_clusters: Maximum number of clusters to test for
-        Returns: (gaps, optimalK , clusters)
-        """
-        """
         KmeanClusterGap:\n
         Clustering with Kmeans method and finding the optimal number of 
         clusters based on Gap-statistic.
         ---------------------------
         Parameters:
             - feature_matrix: pandas.DataFrame
-            - nrefs: int, default is 3.
-            - max_num_clusters: int, default is None.
+            - nrefs: int, number of sample reference datasets to create and default is 3.
+            - max_num_clusters: int, Maximum number of clusters to test for and default is None.
             - random_state: int, default is 1.
         ---------------------------
         Return:
-            - optimal_k: int
-            - Resultsdf: pandas.DataFrame
-            - clusters: dict
+            - optimal_k: int, Optimal number of clusters.
+            - Resultsdf: pandas.DataFrame, A DataFrame that contains number of tested clusters and its gap-statistic.
+            - clusters: dict, A Dictionary that contains assets in each cluster seperately.
         ---------------------------
             
         """
@@ -131,10 +123,10 @@ class Cluster_ext:
         Gets Quasi-Diagonaliztion (actually Matrix Seriation) of the assets
         ---------------------------
         Parameters:
-            - link: numpy.array
+            - link: numpy.array, Linkage matrix.
         ---------------------------
         Return:
-            - sortIx.tolist(): list
+            - sortIx.tolist(): list, List of sorted assets based on their simillarity.
         ---------------------------
             
         """ 
