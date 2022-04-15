@@ -42,8 +42,7 @@ class Cluster_ext:
             kmeans = KMeans(n_clusters = k,
                             init = 'random',
                             random_state= random_state,
-                            n_init =50)
-            kmeans.fit(feature_matrix)
+                            n_init =50).fit(feature_matrix)
             silhouette_coefficients.append(silhouette_score(feature_matrix, kmeans.labels_))
         
         best_kmeans = KMeans(n_clusters= np.argmax(silhouette_coefficients) + k_min,
@@ -59,10 +58,12 @@ class Cluster_ext:
     
     
     def KmeanClusterGap(feature_matrix:pd.DataFrame,
-                        nrefs=3,
-                        max_num_clusters=None ,
-                        random_state = 1
-                        ):
+                    data_rets:pd.DataFrame,
+                    nrefs:int=20,
+                    max_num_clusters:int=None ,
+                    random_state:int= 11,
+                    
+                    ):
         """
         KmeanClusterGap:\n
         Clustering with Kmeans method and finding the optimal number of 
@@ -70,17 +71,17 @@ class Cluster_ext:
         ---------------------------
         Parameters:
             - feature_matrix: pandas.DataFrame
+            - data_rets: pandas.DataFrame , dataframe of returns of assets
             - nrefs: int, number of sample reference datasets to create and default is 3.
             - max_num_clusters: int, Maximum number of clusters to test for and default is None.
             - random_state: int, default is 1.
         ---------------------------
         Return:
-            - optimal_k: int, Optimal number of clusters.
-            - Resultsdf: pandas.DataFrame, A DataFrame that contains number of tested clusters and its gap-statistic.
             - clusters: dict, A Dictionary that contains assets in each cluster seperately.
         ---------------------------
             
         """
+        
         if max_num_clusters == None:
             maxClusters = feature_matrix.shape[0]
         else:
@@ -92,28 +93,27 @@ class Cluster_ext:
             refDisps = np.zeros(nrefs)
             for i in range(nrefs):
                 
-                randomReference = np.random.random_sample(size=feature_matrix.shape)
-                km = KMeans(k)
-                km.fit(randomReference)
+                # randomReference_rets = (pd.DataFrame(np.random.rand(*data_rets.shape)))
+                # randomReference_corrs = (np.array((pd.DataFrame(np.random.rand(*data_rets.shape))).corr()))
+                randomReference = np.sqrt(2 * (1 - (np.array((pd.DataFrame(np.random.rand(*data_rets.shape))).corr()))).round(5))
                 
-                refDisp = km.inertia_
-                refDisps[i] = refDisp
-            km = KMeans(k)
-            km.fit(feature_matrix)
+                km = KMeans(k).fit(randomReference)
+                
+                refDisps[i] = km.inertia_
+            km = KMeans(k).fit(feature_matrix)
             
-            origDisp = km.inertia_
-            gap = np.log(np.mean(refDisps)) - np.log(origDisp)
+            gap = np.mean(np.log(refDisps)) - np.log(km.inertia_)
             gaps[gap_index] = gap
-            resultsdf = resultsdf.append({'clusterCount':k, 'gap':gap}, ignore_index=True)
-            optimal_k = gaps.argmax() + 1
-            best_kmeans = KMeans(n_clusters= optimal_k ,init = 'random',
-                                random_state= random_state)
-            best_kmeans.fit(feature_matrix)
+            resultsdf = resultsdf.append({'clusterCount':k, 'gap':gap},
+                                         ignore_index=True)
+            best_kmeans = KMeans(n_clusters= gaps.argmax() + 1,
+                                 init = 'random',
+                                random_state= random_state).fit(feature_matrix)
             
             clusters = defaultdict(list)
             for cluster_number,asset in zip(best_kmeans.labels_ , feature_matrix.columns):
                 clusters[cluster_number].append(asset)
-        return optimal_k, resultsdf , clusters
+        return clusters
 
 
 
