@@ -13,10 +13,10 @@ class Cluster_ext:
 
 
     def KmeanClusterSil(feature_matrix:pd.DataFrame,
-                        random_state = 1,
-                        k_min = 2 ,
-                        max_num_clusters = None
-                        ):
+                        random_state:int = 1,
+                        k_min:int = 2 ,
+                        max_num_clusters:int = None
+                        ) -> dict:
         """
         KmeanClusterSil:\n
         Clustering with Kmeans method and finding the optimal number of 
@@ -29,8 +29,6 @@ class Cluster_ext:
             - max_num_clusters: int, Maximum number of clusters to test for and default is None.
         ---------------------------
         Return:
-            - optimal_k: int, Optimal number of clusters.
-            - best_kmeans.labels_.tolist: list, list of cluster labels based on the best number of clusters. 
             - clusters: dict, A Dictionary that contains assets in each cluster seperately.
         ---------------------------
         """
@@ -41,20 +39,23 @@ class Cluster_ext:
             k_max = feature_matrix.shape[0]
         
         for k in range(k_min,k_max):
-            kmeans = KMeans(n_clusters = k, init = 'random', random_state= random_state, n_init =50)
+            kmeans = KMeans(n_clusters = k,
+                            init = 'random',
+                            random_state= random_state,
+                            n_init =50)
             kmeans.fit(feature_matrix)
-            score = silhouette_score(feature_matrix, kmeans.labels_)
-            silhouette_coefficients.append(score)
+            silhouette_coefficients.append(silhouette_score(feature_matrix, kmeans.labels_))
         
-        optimal_k = np.argmax(silhouette_coefficients) + k_min
-        best_kmeans = KMeans(n_clusters= optimal_k ,init = 'random', random_state= random_state, n_init =50)
-        best_kmeans.fit(feature_matrix)
+        best_kmeans = KMeans(n_clusters= np.argmax(silhouette_coefficients) + k_min,
+                             init = 'random',
+                             random_state= random_state,
+                             n_init =50).fit(feature_matrix)
         
         clusters = defaultdict(list)
         for cluster_number,asset in zip(best_kmeans.labels_ , feature_matrix.columns):
             clusters[cluster_number].append(asset)
             
-        return optimal_k , best_kmeans.labels_.tolist() , clusters
+        return clusters
     
     
     def KmeanClusterGap(feature_matrix:pd.DataFrame,
